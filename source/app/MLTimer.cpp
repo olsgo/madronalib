@@ -10,6 +10,13 @@
 #include "MLPlatform.h"
 using namespace std::chrono;
 
+// new changes
+
+// Add this near the top of the file, after the includes
+#ifndef ML_MAC
+#error "ML_MAC must be defined for macOS builds"
+#endif  // Remove the semicolon here
+
 // Timers
 
 const int ml::Timers::kMillisecondsResolution = 16;

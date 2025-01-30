@@ -1,3 +1,4 @@
+# --- START OF FILE CMakeLists.txt ---
 # madronalib/CMakeLists.txt
 # root CMake file for madronalib project.
 
@@ -14,8 +15,11 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 IF(APPLE)
-  SET(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build architectures for Mac OS X" FORCE)
+  # Force arm64 architecture for Apple Silicon (M1 Max) - to avoid potential fat binary issues
+  SET(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "Build architectures for Mac OS X" FORCE)
   SET(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "Minimum OS X deployment version")
+  # Add ML_MAC definition for Apple builds
+  add_definitions(-DML_MAC)
 ENDIF(APPLE)
 
 
@@ -23,9 +27,9 @@ ENDIF(APPLE)
 # project and version
 #--------------------------------------------------------------------
 
-set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE) 
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 
-project(madronalib) 
+project(madronalib)
 
 set(madronalib_VERSION_MAJOR "0")
 set(madronalib_VERSION_MINOR "1")
@@ -53,9 +57,9 @@ endif()
  set(CMAKE_CXX_STANDARD_REQUIRED True)
  set(CMAKE_CXX_VISIBILITY_PRESET hidden)
  set(CMAKE_VISIBILITY_INLINES_HIDDEN OFF)
- 
+
  if(APPLE)
-   # For now, explicitly disable C++17 alignment feature
+   # For now, explicitly disable C++17 alignment feature - recommended for Apple builds
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-aligned-new")
  elseif(WIN32)
    # no unknown pragma warning
@@ -120,6 +124,9 @@ endif()
 file(GLOB APP_SOURCES "source/app/*.cpp")
 file(GLOB APP_HEADERS "source/app/*.h")
 
+# Explicitly add MLTimer.cpp to ensure it's included
+list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/source/app/MLTimer.cpp")
+
 # DSP code is headers-only
 file(GLOB DSP_HEADERS "source/DSP/*.h")
 
@@ -156,7 +163,7 @@ set(OSC_HEADERS
     ${OSC_HEADERS_ZEROCONF}
 )
 
-# set the sources - we include the headers only to make them 
+# set the sources - we include the headers only to make them
 # navigable within IDEs
 
 set(madronalib_SOURCES
@@ -208,10 +215,10 @@ set_target_properties(${target} PROPERTIES
                       SOVERSION ${madronalib_VERSION_MAJOR}
                       POSITION_INDEPENDENT_CODE ON
                       FOLDER "madronalib")
-                      
+
 target_include_directories(${target} PRIVATE ${RTAUDIO_HEADERS})
 
-                      
+
 # choose driver for Rtaudio
 if(WIN32)
     target_compile_definitions(${target} PRIVATE __WINDOWS_WASAPI__)
@@ -273,12 +280,12 @@ install(FILES external/sse2neon/sse2neon.h DESTINATION ${HEADERS_INCLUDE_DIR})
 
 install(FILES external/rtaudio/RtAudio.h DESTINATION ${HEADERS_INCLUDE_DIR})
 
-install(FILES 
-    ${APP_HEADERS}     
+install(FILES
+    ${APP_HEADERS}
     ${DSP_HEADERS}
-    ${MATRIX_HEADERS} 
+    ${MATRIX_HEADERS}
     ${OSC_HEADERS}
-    DESTINATION 
+    DESTINATION
     # PERMISSIONS OWNER_READ GROUP_READ WORLD_READ
     ${HEADERS_INCLUDE_DIR}
   )
@@ -329,7 +336,7 @@ function(MAKE_EXAMPLE EXAMPLE_APP_NAME EXAMPLE_SOURCE_FILE)
         ${ML_ROOT}/external
         ${ML_ROOT}/external/rtaudio
         )
-    
+
     # rtaudio source is now in madronalib
     target_link_libraries(${EXAMPLE_APP_NAME} PRIVATE madronalib)
 
@@ -337,8 +344,8 @@ function(MAKE_EXAMPLE EXAMPLE_APP_NAME EXAMPLE_SOURCE_FILE)
         PROPERTIES
         MACOSX_BUNDLE TRUE
 
-        # not working, see below for workaround adding to plist 
-        # MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MacOSXBundleInfo.plist.in 
+        # not working, see below for workaround adding to plist
+        # MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MacOSXBundleInfo.plist.in
 
         MACOSX_BUNDLE_BUNDLE_NAME ${EXAMPLE_APP_NAME}
         MACOSX_BUNDLE_BUNDLE_VERSION "0.9.0"
@@ -350,7 +357,7 @@ function(MAKE_EXAMPLE EXAMPLE_APP_NAME EXAMPLE_SOURCE_FILE)
     # get directory of .app package Contents
     set(PACKAGE_DIR
         "${CMAKE_CURRENT_SOURCE_DIR}/build/bin/$<CONFIG>/${EXAMPLE_APP_NAME}.app/Contents"
-        )    
+        )
 
     # add missing keys to plist for Mac OS
     if(APPLE)
@@ -421,5 +428,4 @@ if(CLANG_FORMAT)
     )
 endif()
 
-
-
+# --- END OF FILE CMakeLists.txt ---
